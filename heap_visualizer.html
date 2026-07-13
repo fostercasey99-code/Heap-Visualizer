@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heap Visualizer</title>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --card: #ffffff;
+    --ink: #2c2a24;
+    --ink-soft: #6b6658;
+    --border: #e2ddd0;
+    --accent: #534ab7;
+    --accent-soft: #ede9fb;
+    --amber: #c8792c;
+    --amber-soft: #fdeee0;
+    --teal: #1f8f74;
+    --teal-soft: #e3f4f0;
+    --coral: #c0392b;
+    --coral-soft: #fbeaea;
+    --node-fill: #ffffff;
+    --node-stroke: #b9b3a1;
+    --edge: #cfc9bd;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  .wrap { width: 100%; padding: 28px 32px 60px; }
+
+  header { margin-bottom: 22px; }
+  header h1 { font-size: 34px; margin: 0 0 6px 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--ink-soft); font-size: 17px; }
+
+  .panel { background: var(--card); border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); padding: 20px 22px; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 18px; }
+
+  .toggle-group { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .toggle-group button { border-radius: 0; border: none; background: var(--bg); color: var(--ink-soft); }
+  .toggle-group button.active { background: var(--accent); color: #fff; }
+
+  input[type="number"] { width: 110px; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border); font-size: 17px; font-family: 'SF Mono', Consolas, monospace; }
+  input[type="number"]:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  button { padding: 13px 22px; border-radius: 10px; border: 1px solid transparent; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.08s ease, opacity 0.15s ease; font-family: inherit; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .btn-insert { background: var(--accent); color: #fff; }
+  .btn-remove { background: var(--coral); color: #fff; }
+  .btn-ghost { background: var(--bg); color: var(--ink-soft); border-color: var(--border); }
+  .btn-nav { background: var(--ink); color: #fff; min-width: 156px; }
+
+  .spacer { flex: 1; }
+
+  .nav-row-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .step-indicator { font-size: 15px; color: var(--ink-soft); font-family: 'SF Mono', Consolas, monospace; margin-right: 72px; }
+
+  .btn-cancel {
+    position: absolute; top: 18px; right: 20px; width: 38px; height: 38px; padding: 0;
+    border-radius: 50%; background: var(--bg); color: var(--ink-soft); border: 1px solid var(--border);
+    font-size: 19px; line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .btn-cancel:hover:not(:disabled) { background: var(--coral-soft); color: var(--coral); border-color: var(--coral); }
+
+  .log-panel { display: flex; flex-direction: column; margin-bottom: 18px; position: relative; }
+  .log-panel h2 { font-size: 17px; margin: 0 0 4px 0; color: var(--accent); }
+  .log-panel .log-sub { font-size: 14px; color: var(--ink-soft); margin: 0 0 12px 0; }
+  .log-entry { font-size: 16px; line-height: 1.6; padding: 14px 18px; border-radius: 10px; background: var(--bg); border-left: 4px solid var(--border); }
+  .log-entry.compare { border-left-color: var(--amber); background: var(--amber-soft); }
+  .log-entry.success { border-left-color: var(--teal); background: var(--teal-soft); }
+  .log-entry.fail { border-left-color: var(--coral); background: var(--coral-soft); }
+  .log-entry.info { border-left-color: var(--accent); background: var(--accent-soft); }
+
+  .tree-area { background: #faf9f6; border-radius: 12px; border: 1px solid var(--border); overflow: auto; min-height: 480px; position: relative; margin-bottom: 18px; }
+  svg { display: block; }
+
+  .status-bar { font-size: 16px; color: var(--ink-soft); min-height: 24px; margin-bottom: 14px; }
+  .status-bar.success { color: var(--teal); font-weight: 600; }
+  .status-bar.error { color: var(--coral); font-weight: 600; }
+
+  .edge { stroke: var(--edge); stroke-width: 2; transition: x1 0.45s ease, y1 0.45s ease, x2 0.45s ease, y2 0.45s ease, opacity 0.3s ease; }
+  .node-group { transition: transform 0.45s ease, opacity 0.3s ease; cursor: pointer; }
+  .node-circle { fill: var(--node-fill); stroke: var(--node-stroke); stroke-width: 2; transition: fill 0.2s ease, stroke 0.2s ease; }
+  .node-text { font-family: 'SF Mono', Consolas, monospace; font-size: 16px; font-weight: 700; fill: var(--ink); text-anchor: middle; dominant-baseline: central; transition: fill 0.2s ease; pointer-events: none; }
+
+  .node-group.current .node-circle { fill: var(--amber-soft); stroke: var(--amber); stroke-width: 2.6; }
+  .node-group.current .node-text { fill: #7a4210; }
+  .node-group.compare .node-circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.6; }
+  .node-group.compare .node-text { fill: #3d3560; }
+  .node-group.found .node-circle { fill: var(--teal-soft); stroke: var(--teal); stroke-width: 2.6; }
+  .node-group.found .node-text { fill: #14523f; }
+  .node-group.removing .node-circle { fill: var(--coral-soft); stroke: var(--coral); stroke-width: 2.6; }
+  .node-group.removing .node-text { fill: #7a1f14; }
+
+  .node-group.entering { animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.3) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .node-group.leaving { animation: popOut 0.3s ease forwards; }
+  @keyframes popOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.25); } }
+
+  .empty-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--ink-soft); font-size: 15px; text-align: center; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 14.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 15px; height: 15px; border-radius: 50%; display: inline-block; border: 2px solid var(--node-stroke); }
+  .swatch.current { background: var(--amber-soft); border-color: var(--amber); }
+  .swatch.compare { background: var(--accent-soft); border-color: var(--accent); }
+  .swatch.found { background: var(--teal-soft); border-color: var(--teal); }
+  .swatch.removing { background: var(--coral-soft); border-color: var(--coral); }
+
+  .hint { font-size: 15px; color: var(--ink-soft); background: var(--amber-soft); border: 1px solid #f0d9bb; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; display: none; }
+  .hint.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Heap Visualizer</h1>
+    <p>Insert and remove, one comparison at a time. You control every step.</p>
+  </header>
+
+  <div class="panel">
+    <div class="hint" id="hint">A walkthrough is in progress — use <b>Previous</b> / <b>Next step</b> below to move through it, or the ✕ to cancel.</div>
+
+    <div class="controls">
+      <div class="toggle-group">
+        <button id="btnMax" class="active">Max-Heap</button>
+        <button id="btnMin">Min-Heap</button>
+      </div>
+      <input type="number" id="keyInput" placeholder="value" aria-label="Value">
+      <button class="btn-insert" id="btnInsert">Insert</button>
+      <button class="btn-ghost" id="btnRandom">Insert random</button>
+      <button class="btn-ghost" id="btnClear">Clear heap</button>
+    </div>
+
+    <div class="log-panel">
+      <button id="btnCancel" class="btn-cancel" title="Cancel this operation" aria-label="Cancel this operation" disabled>✕</button>
+      <div class="nav-row-top">
+        <button class="btn-nav btn-ghost" id="btnPrev" disabled>← Previous</button>
+        <button class="btn-nav" id="btnNext" disabled>Next step →</button>
+        <div class="spacer"></div>
+        <div class="step-indicator" id="stepIndicator"></div>
+      </div>
+      <h2>Algorithm steps</h2>
+      <p class="log-sub" id="logSub">Every comparison the algorithm makes, in order.</p>
+      <div id="logList"></div>
+    </div>
+
+    <p style="font-size:14.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border:1px solid #cfc6f0;padding:10px 14px;border-radius:8px;margin:0 0 14px 0;display:inline-flex;align-items:center;gap:8px;" id="clickHint"><span style="font-size:17px;">☝</span> Click any node in the tree below to remove it</p>
+    <div class="tree-area" id="treeArea">
+      <svg id="svg" width="100%" height="460"></svg>
+      <div class="empty-msg" id="emptyMsg">Heap is empty — insert a value to begin.</div>
+    </div>
+    <div class="status-bar" id="statusBar"></div>
+    <div class="legend">
+      <span><span class="swatch current"></span> current node</span>
+      <span><span class="swatch compare"></span> compared against</span>
+      <span><span class="swatch found"></span> inserted / settled</span>
+      <span><span class="swatch removing"></span> being removed</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var heapType = 'max'; // 'max' or 'min'
+  var heap = []; // array of {id, val} objects (committed state) — id persists across moves
+  var nextId = 1;
+  function makeHeapNode(val) { return { id: nextId++, val: val }; }
+
+  var svg = document.getElementById('svg');
+  var treeArea = document.getElementById('treeArea');
+  var emptyMsg = document.getElementById('emptyMsg');
+  var logList = document.getElementById('logList');
+  var logSub = document.getElementById('logSub');
+  var statusBar = document.getElementById('statusBar');
+  var keyInput = document.getElementById('keyInput');
+  var hint = document.getElementById('hint');
+  var stepIndicator = document.getElementById('stepIndicator');
+
+  var btnInsert = document.getElementById('btnInsert');
+  var btnRandom = document.getElementById('btnRandom');
+  var btnClear = document.getElementById('btnClear');
+  var btnPrev = document.getElementById('btnPrev');
+  var btnNext = document.getElementById('btnNext');
+  var btnCancel = document.getElementById('btnCancel');
+  var btnMax = document.getElementById('btnMax');
+  var btnMin = document.getElementById('btnMin');
+  var clickHint = document.getElementById('clickHint');
+
+  var opButtons = [btnInsert, btnRandom, btnClear, btnMax, btnMin];
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var nodeEls = {}; // index -> {g, circle, text}  (keyed by array index)
+  var edgeEls = [];
+
+  var MARGIN_Y = 40, LEVEL_Y = 90, SPACING_X = 74, RADIUS = 24;
+
+  function cmp(a, b) {
+    // returns true if 'a' should be considered "better" (bigger for max, smaller for min)
+    return heapType === 'max' ? a > b : a < b;
+  }
+  function cmpEq(a, b) {
+    return heapType === 'max' ? a >= b : a <= b;
+  }
+
+  function setStatus(text, kind) {
+    statusBar.textContent = text || '';
+    statusBar.className = 'status-bar' + (kind ? ' ' + kind : '');
+  }
+  function setLogEntry(text, kind) {
+    logList.innerHTML = '';
+    if (!text) return;
+    var div = document.createElement('div');
+    div.className = 'log-entry ' + kind + ' active';
+    div.textContent = text;
+    logList.appendChild(div);
+  }
+
+  // ---- layout: complete binary tree from array indices ----
+  function layoutPositions(arr) {
+    var n = arr.length;
+    var maxDepth = n > 0 ? Math.floor(Math.log2(n)) : 0;
+    var positions = [];
+    for (var i = 0; i < n; i++) {
+      var depth = Math.floor(Math.log2(i + 1));
+      var levelStart = Math.pow(2, depth) - 1;
+      var posInLevel = i - levelStart;
+      var levelWidth = Math.pow(2, depth);
+      positions[i] = { depth: depth, posInLevel: posInLevel, levelWidth: levelWidth };
+    }
+    return { positions: positions, maxDepth: maxDepth };
+  }
+
+  function computeXY(arr) {
+    var info = layoutPositions(arr);
+    var bottomWidth = Math.pow(2, info.maxDepth);
+    var totalWidth = Math.max(treeArea.clientWidth, bottomWidth * SPACING_X + 80);
+    var coords = [];
+    for (var i = 0; i < arr.length; i++) {
+      var p = info.positions[i];
+      var slotWidth = totalWidth / p.levelWidth;
+      var x = slotWidth * (p.posInLevel + 0.5);
+      var y = MARGIN_Y + p.depth * LEVEL_Y;
+      coords[i] = { x: x, y: y };
+    }
+    var height = Math.max(460, MARGIN_Y * 2 + info.maxDepth * LEVEL_Y + 40);
+    return { coords: coords, width: totalWidth, height: height };
+  }
+
+  function render(arr) {
+    var layout = computeXY(arr);
+    svg.setAttribute('width', layout.width);
+    svg.setAttribute('height', layout.height);
+    svg.setAttribute('viewBox', '0 0 ' + layout.width + ' ' + layout.height);
+    emptyMsg.style.display = arr.length ? 'none' : 'block';
+
+    var liveIds = {};
+    for (var i = 0; i < arr.length; i++) { if (arr[i]) liveIds[arr[i].id] = true; }
+
+    // remove edges whose child slot no longer exists at that index
+    edgeEls = edgeEls.filter(function (e) {
+      if (e.childIdx >= arr.length) {
+        e.line.style.opacity = '0';
+        (function (line) { setTimeout(function () { line.remove(); }, 320); })(e.line);
+        return false;
+      }
+      return true;
+    });
+
+    // remove DOM nodes for ids no longer present anywhere in the array
+    Object.keys(nodeEls).forEach(function (idKey) {
+      if (!liveIds[idKey]) {
+        var rec = nodeEls[idKey];
+        rec.g.classList.remove('entering');
+        rec.g.classList.add('leaving');
+        (function (g) { setTimeout(function () { g.remove(); }, 320); })(rec.g);
+        delete nodeEls[idKey];
+      }
+    });
+
+    // edges (structural, based on index positions in the complete tree)
+    // Determine which parent-child pairs are currently valid (both endpoints occupied, not a gap)
+    var validPairs = {};
+    for (var vIdx = 0; vIdx < arr.length; vIdx++) {
+      if (!arr[vIdx]) continue;
+      var vLeft = 2 * vIdx + 1, vRight = 2 * vIdx + 2;
+      if (vLeft < arr.length && arr[vLeft]) validPairs[vIdx + '-' + vLeft] = true;
+      if (vRight < arr.length && arr[vRight]) validPairs[vIdx + '-' + vRight] = true;
+    }
+    // fade out any existing edge that is no longer valid (e.g. touches a gap)
+    edgeEls = edgeEls.filter(function (e) {
+      var key = e.parentIdx + '-' + e.childIdx;
+      if (e.childIdx >= arr.length || !validPairs[key]) {
+        e.line.style.opacity = '0';
+        (function (line) { setTimeout(function () { line.remove(); }, 320); })(e.line);
+        return false;
+      }
+      return true;
+    });
+
+    for (var idx = 0; idx < arr.length; idx++) {
+      if (!arr[idx]) continue;
+      var leftIdx = 2 * idx + 1, rightIdx = 2 * idx + 2;
+      [leftIdx, rightIdx].forEach(function (childIdx) {
+        if (childIdx >= arr.length || !arr[childIdx]) return;
+        var existing = edgeEls.filter(function (e) { return e.parentIdx === idx && e.childIdx === childIdx; })[0];
+        var px = layout.coords[idx].x, py = layout.coords[idx].y;
+        var cx = layout.coords[childIdx].x, cy = layout.coords[childIdx].y;
+        if (!existing) {
+          var line = document.createElementNS(SVG_NS, 'line');
+          line.setAttribute('class', 'edge');
+          line.setAttribute('x1', px); line.setAttribute('y1', py);
+          line.setAttribute('x2', px); line.setAttribute('y2', py);
+          line.style.opacity = '0';
+          svg.insertBefore(line, svg.firstChild);
+          existing = { line: line, parentIdx: idx, childIdx: childIdx };
+          edgeEls.push(existing);
+          requestAnimationFrame(function () {
+            line.style.opacity = '1';
+            line.setAttribute('x1', px); line.setAttribute('y1', py);
+            line.setAttribute('x2', cx); line.setAttribute('y2', cy);
+          });
+        } else {
+          existing.line.setAttribute('x1', px); existing.line.setAttribute('y1', py);
+          existing.line.setAttribute('x2', cx); existing.line.setAttribute('y2', cy);
+        }
+      });
+    }
+
+    // nodes — keyed by persistent id, so moving to a new index animates position, not text
+    for (var i2 = 0; i2 < arr.length; i2++) {
+      if (!arr[i2]) continue;
+      var node = arr[i2];
+      var rec2 = nodeEls[node.id];
+      var x2 = layout.coords[i2].x, y2 = layout.coords[i2].y;
+      if (!rec2) {
+        var g = document.createElementNS(SVG_NS, 'g');
+        g.setAttribute('class', 'node-group entering');
+        g.setAttribute('transform', 'translate(' + x2 + ',' + y2 + ')');
+        var circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('class', 'node-circle');
+        circle.setAttribute('r', RADIUS);
+        var text = document.createElementNS(SVG_NS, 'text');
+        text.setAttribute('class', 'node-text');
+        text.textContent = node.val;
+        g.appendChild(circle); g.appendChild(text);
+        svg.appendChild(g);
+        rec2 = { g: g, circle: circle, text: text };
+        nodeEls[node.id] = rec2;
+        (function (grp) { setTimeout(function () { grp.classList.remove('entering'); }, 420); })(g);
+        (function (nodeId) {
+          g.addEventListener('click', function () {
+            var current = heap.filter(function (n) { return n.id === nodeId; })[0];
+            if (!current) return;
+            cancelWalkthroughIfActive();
+            startWalkthrough(buildRemoveNodeSteps(nodeId), 'Removing ' + current.val);
+          });
+        })(node.id);
+      } else {
+        rec2.g.setAttribute('transform', 'translate(' + x2 + ',' + y2 + ')');
+      }
+      rec2.text.textContent = node.val;
+    }
+  }
+
+  function applyHighlights(highlights) {
+    Object.keys(nodeEls).forEach(function (k) {
+      nodeEls[k].g.classList.remove('current', 'compare', 'found', 'removing');
+    });
+    highlights.forEach(function (h) {
+      var rec = nodeEls[h.id];
+      if (rec) rec.g.classList.add(h.cls);
+    });
+  }
+
+  function setOpButtonsEnabled(enabled) {
+    opButtons.forEach(function (b) { b.disabled = !enabled; });
+    keyInput.disabled = !enabled;
+  }
+
+  // ---- STEP BUILDERS ----
+  // step = { arr, highlights:[{idx,cls}], log:{text,kind}|null, status:{text,kind}|null }
+
+  function buildInsertSteps(val) {
+    var steps = [];
+    var arr = heap.slice();
+    var newNode = makeHeapNode(val);
+    arr.push(newNode);
+    var i = arr.length - 1;
+
+    steps.push({ arr: arr.slice(), highlights: [{ id: newNode.id, cls: 'current' }], log: { text: 'Inserting ' + val + ' at the next open spot (index ' + i + ', end of the array).', kind: 'info' }, status: null });
+
+    while (i > 0) {
+      var parent = Math.floor((i - 1) / 2);
+      var curNode = arr[i], parentNode = arr[parent];
+      steps.push({ arr: arr.slice(), highlights: [{ id: curNode.id, cls: 'current' }, { id: parentNode.id, cls: 'compare' }], log: { text: 'Comparing ' + curNode.val + ' with its parent ' + parentNode.val + '.', kind: 'compare' }, status: null });
+
+      if (cmp(curNode.val, parentNode.val)) {
+        arr[i] = parentNode; arr[parent] = curNode;
+        steps.push({ arr: arr.slice(), highlights: [{ id: curNode.id, cls: 'current' }], log: { text: (heapType === 'max' ? val + ' > ' : val + ' < ') + parentNode.val + ' — swap with parent.', kind: 'success' }, status: null });
+        i = parent;
+      } else {
+        steps.push({ arr: arr.slice(), highlights: [{ id: curNode.id, cls: 'found' }], log: { text: 'No violation (' + curNode.val + ' is already in the correct order vs its parent) — percolate-up stops here.', kind: 'success' }, status: { text: 'Inserted ' + val + '.', kind: 'success' } });
+        return steps;
+      }
+    }
+    steps.push({ arr: arr.slice(), highlights: [{ id: newNode.id, cls: 'found' }], log: { text: val + ' reached the root — it is now the ' + (heapType === 'max' ? 'maximum' : 'minimum') + ' of the whole heap.', kind: 'success' }, status: { text: 'Inserted ' + val + '.', kind: 'success' } });
+    return steps;
+  }
+
+  // Remove whichever node was clicked, identified by its persistent id.
+  // Replaces it with the last node, then percolates that replacement DOWN if
+  // it's out of order with its children, or UP if it's not — only one
+  // direction can ever be needed (this also correctly handles removing the
+  // root itself, since the root is just index 0).
+  function buildRemoveNodeSteps(targetId) {
+    var steps = [];
+    if (heap.length === 0) {
+      steps.push({ arr: [], highlights: [], log: { text: 'Heap is empty.', kind: 'fail' }, status: { text: 'Cannot remove — heap is empty.', kind: 'error' } });
+      return steps;
+    }
+    var arr = heap.slice();
+    var targetIdx = -1;
+    for (var s = 0; s < arr.length; s++) { if (arr[s].id === targetId) { targetIdx = s; break; } }
+    if (targetIdx === -1) {
+      steps.push({ arr: arr.slice(), highlights: [], log: { text: 'That node is no longer in the heap.', kind: 'fail' }, status: { text: 'Nothing removed.', kind: 'error' } });
+      return steps;
+    }
+
+    var targetNode = arr[targetIdx];
+    var isRoot = targetIdx === 0;
+    steps.push({ arr: arr.slice(), highlights: [{ id: targetNode.id, cls: 'removing' }], log: { text: 'Removing ' + targetNode.val + (isRoot ? ' (the root — the ' + (heapType === 'max' ? 'maximum' : 'minimum') + ' of the heap).' : ' at index ' + targetIdx + '.'), kind: 'info' }, status: null });
+
+    var last = arr.length - 1;
+    if (targetIdx === last) {
+      arr.pop();
+      steps.push({ arr: arr.slice(), highlights: [], log: { text: targetNode.val + ' was already the last node — just removed, no repositioning needed.', kind: 'success' }, status: { text: 'Removed ' + targetNode.val + '.', kind: 'success' } });
+      return steps;
+    }
+
+    var movedNode = arr[last];
+    arr[targetIdx] = movedNode;
+    arr[last] = targetNode;
+    steps.push({ arr: arr.slice(), highlights: [{ id: targetNode.id, cls: 'removing' }, { id: movedNode.id, cls: 'current' }], log: { text: 'Swapping ' + targetNode.val + ' with the last node, ' + movedNode.val + '.', kind: 'info' }, status: null });
+
+    arr.pop();
+    steps.push({ arr: arr.slice(), highlights: [{ id: movedNode.id, cls: 'current' }], log: { text: targetNode.val + ' is now at the end — remove it.', kind: 'success' }, status: null });
+
+    var n = arr.length;
+    var i = targetIdx;
+
+    // First, try percolating DOWN.
+    var movedDown = false;
+    while (true) {
+      var left = 2 * i + 1, right = 2 * i + 2;
+      if (left >= n) break;
+      var winner = left;
+      if (right < n && cmp(arr[right].val, arr[left].val)) winner = right;
+      var curNode = arr[i], winnerNode = arr[winner];
+
+      steps.push({ arr: arr.slice(), highlights: [{ id: curNode.id, cls: 'current' }, { id: winnerNode.id, cls: 'compare' }], log: { text: 'Checking downward: comparing ' + curNode.val + ' with its ' + (heapType === 'max' ? 'larger' : 'smaller') + ' child, ' + winnerNode.val + '.', kind: 'compare' }, status: null });
+
+      if (cmp(winnerNode.val, curNode.val)) {
+        arr[i] = winnerNode; arr[winner] = curNode;
+        steps.push({ arr: arr.slice(), highlights: [{ id: curNode.id, cls: 'current' }], log: { text: 'Swapped down — ' + curNode.val + ' continues sinking.', kind: 'success' }, status: null });
+        i = winner;
+        movedDown = true;
+      } else {
+        break;
+      }
+    }
+
+    if (!movedDown) {
+      // Try percolating UP instead — only relevant if it never moved down.
+      while (i > 0) {
+        var parent = Math.floor((i - 1) / 2);
+        var curNode2 = arr[i], parentNode = arr[parent];
+        steps.push({ arr: arr.slice(), highlights: [{ id: curNode2.id, cls: 'current' }, { id: parentNode.id, cls: 'compare' }], log: { text: 'Checking upward: comparing ' + curNode2.val + ' with its parent ' + parentNode.val + '.', kind: 'compare' }, status: null });
+
+        if (cmp(curNode2.val, parentNode.val)) {
+          arr[i] = parentNode; arr[parent] = curNode2;
+          steps.push({ arr: arr.slice(), highlights: [{ id: curNode2.id, cls: 'current' }], log: { text: 'Swapped up — ' + curNode2.val + ' continues rising.', kind: 'success' }, status: null });
+          i = parent;
+        } else {
+          break;
+        }
+      }
+    }
+
+    steps.push({ arr: arr.slice(), highlights: [{ id: arr[i].id, cls: 'found' }], log: { text: 'No further violations — heap property restored.', kind: 'success' }, status: { text: 'Removed ' + targetNode.val + '.', kind: 'success' } });
+    return steps;
+  }
+
+  // ---- WALKTHROUGH CONTROLLER ----
+  var walkthrough = null;
+
+  function startWalkthrough(steps, opLabel) {
+    walkthrough = { steps: steps, index: 0, opLabel: opLabel };
+    setOpButtonsEnabled(false);
+    btnCancel.disabled = false;
+    hint.classList.add('show');
+    logSub.textContent = opLabel + ' — step through with the buttons above.';
+    btnPrev.disabled = false; btnNext.disabled = false;
+    showStep();
+  }
+
+  function showStep() {
+    var step = walkthrough.steps[walkthrough.index];
+    render(step.arr);
+    applyHighlights(step.highlights);
+    setLogEntry(step.log ? step.log.text : '', step.log ? step.log.kind : 'info');
+    if (step.status && walkthrough.index === walkthrough.steps.length - 1) {
+      setStatus(step.status.text, step.status.kind);
+    } else {
+      setStatus('Step ' + (walkthrough.index + 1) + ' of ' + walkthrough.steps.length + ' — ' + walkthrough.opLabel, '');
+    }
+    stepIndicator.textContent = 'Step ' + (walkthrough.index + 1) + ' / ' + walkthrough.steps.length;
+    btnPrev.disabled = walkthrough.index === 0;
+    btnNext.textContent = walkthrough.index === walkthrough.steps.length - 1 ? 'Finish ✓' : 'Next step →';
+  }
+
+  function cancelWalkthroughIfActive() {
+    if (!walkthrough) return;
+    endWalkthrough();
+    render(heap);
+    applyHighlights([]);
+  }
+
+  function endWalkthrough() {
+    walkthrough = null;
+    hint.classList.remove('show');
+    logSub.textContent = 'Every comparison the algorithm makes, in order.';
+    setOpButtonsEnabled(true);
+    btnCancel.disabled = true;
+    btnPrev.disabled = true;
+    btnNext.disabled = true;
+    btnNext.textContent = 'Next step →';
+    stepIndicator.textContent = '';
+  }
+
+  btnNext.addEventListener('click', function () {
+    if (!walkthrough) return;
+    if (walkthrough.index < walkthrough.steps.length - 1) {
+      walkthrough.index++;
+      showStep();
+    } else {
+      heap = walkthrough.steps[walkthrough.steps.length - 1].arr.slice();
+      var finalStatus = walkthrough.steps[walkthrough.steps.length - 1].status;
+      endWalkthrough();
+      render(heap);
+      applyHighlights([]);
+      if (finalStatus) setStatus(finalStatus.text, finalStatus.kind);
+    }
+  });
+  btnPrev.addEventListener('click', function () {
+    if (!walkthrough || walkthrough.index === 0) return;
+    walkthrough.index--;
+    showStep();
+  });
+  btnCancel.addEventListener('click', function () {
+    if (!walkthrough) return;
+    cancelWalkthroughIfActive();
+    setLogEntry('', '');
+    setStatus('Cancelled — no changes made.', '');
+  });
+
+  function readKey() {
+    var v = keyInput.value.trim();
+    if (v === '') return null;
+    var n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return Math.round(n);
+  }
+
+  btnInsert.addEventListener('click', function () {
+    var k = readKey();
+    if (k === null) { setStatus('Enter a valid number first.', 'error'); return; }
+    startWalkthrough(buildInsertSteps(k), 'Inserting ' + k);
+  });
+  btnRandom.addEventListener('click', function () {
+    var k = Math.floor(Math.random() * 90) + 10;
+    keyInput.value = k;
+    startWalkthrough(buildInsertSteps(k), 'Inserting ' + k);
+  });
+  btnClear.addEventListener('click', function () {
+    heap = [];
+    Object.keys(nodeEls).forEach(function (k) { nodeEls[k].g.remove(); });
+    nodeEls = {};
+    edgeEls.forEach(function (e) { e.line.remove(); });
+    edgeEls = [];
+    setLogEntry('', '');
+    setStatus('Heap cleared.', '');
+    render(heap);
+  });
+
+  function setHeapType(type) {
+    if (heapType === type) return;
+    heapType = type;
+    btnMax.classList.toggle('active', type === 'max');
+    btnMin.classList.toggle('active', type === 'min');
+    heap = [];
+    Object.keys(nodeEls).forEach(function (k) { nodeEls[k].g.remove(); });
+    nodeEls = {};
+    edgeEls.forEach(function (e) { e.line.remove(); });
+    edgeEls = [];
+    setLogEntry('', '');
+    setStatus('Switched to ' + (type === 'max' ? 'max-heap' : 'min-heap') + ' — heap cleared.', '');
+    render(heap);
+  }
+  btnMax.addEventListener('click', function () { setHeapType('max'); });
+  btnMin.addEventListener('click', function () { setHeapType('min'); });
+
+  keyInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') btnInsert.click(); });
+
+  // ---- seed initial heap ----
+  function seedInitial() {
+    var vals = [50, 30, 40, 10, 20, 35, 25];
+    vals.forEach(function (v) {
+      heap.push(makeHeapNode(v));
+      var i = heap.length - 1;
+      while (i > 0) {
+        var parent = Math.floor((i - 1) / 2);
+        if (cmp(heap[i].val, heap[parent].val)) {
+          var tmp = heap[i]; heap[i] = heap[parent]; heap[parent] = tmp;
+          i = parent;
+        } else break;
+      }
+    });
+    render(heap);
+    setLogEntry('Starter max-heap loaded (50, 30, 40, 10, 20, 35, 25). Pick an operation above to begin.', 'info');
+  }
+  seedInitial();
+
+  window.addEventListener('resize', function () {
+    render(walkthrough ? walkthrough.steps[walkthrough.index].arr : heap);
+  });
+})();
+</script>
+</body>
+</html>
