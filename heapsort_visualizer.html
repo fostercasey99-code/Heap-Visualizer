@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heapsort Visualizer</title>
+<style>
+  :root {
+    --bg: #f5f3ee; --card: #ffffff; --ink: #2c2a24; --ink-soft: #6b6658; --border: #e2ddd0;
+    --accent: #534ab7; --accent-soft: #ede9fb; --amber: #c8792c; --amber-soft: #fdeee0;
+    --teal: #1f8f74; --teal-soft: #e3f4f0; --coral: #c0392b; --coral-soft: #fbeaea;
+    --anim-dur: 0.5s;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  .wrap { width: 100%; padding: 28px 32px 60px; }
+  header { margin-bottom: 20px; }
+  header h1 { font-size: 32px; margin: 0 0 6px 0; }
+  header p { margin: 0; color: var(--ink-soft); font-size: 17px; }
+
+  .panel { background: var(--card); border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04); padding: 20px 22px; margin-bottom: 18px; }
+
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  input[type="text"] { flex: 1; min-width: 280px; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border); font-size: 16px; font-family: 'SF Mono', Consolas, monospace; }
+  button { padding: 12px 20px; border-radius: 10px; border: 1px solid transparent; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-build { background: var(--accent); color: #fff; }
+  .btn-nav { background: var(--ink); color: #fff; min-width: 140px; }
+  .btn-ghost { background: var(--bg); color: var(--ink-soft); border-color: var(--border); }
+  .btn-play-go { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .btn-play-stop { background: var(--coral); color: #fff; border-color: var(--coral); }
+
+  .nav-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+  .step-indicator { font-size: 14px; color: var(--ink-soft); font-family: 'SF Mono', Consolas, monospace; }
+
+  .narration { font-size: 15.5px; line-height: 1.6; color: var(--ink); background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 8px; padding: 14px 16px; }
+  .narration.success { background: var(--teal-soft); border-left-color: var(--teal); }
+  .narration.amber { background: var(--amber-soft); border-left-color: var(--amber); }
+  .narration.header { background: var(--coral-soft); border-left-color: var(--coral); font-weight: 700; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .array-track { position: relative; height: 64px; }
+  .array-box { position: absolute; top: 0; padding: 10px 14px; border-radius: 8px; font-family: 'SF Mono', Consolas, monospace; font-weight: 700; font-size: 15px; text-align: center; min-width: 32px; background: #f2f1ee; border: 2px solid var(--border); color: var(--ink-soft); transition: left var(--anim-dur) ease, background 0.2s, border-color 0.2s, color 0.2s; }
+  .array-box .idx { font-size: 10px; opacity: 0.6; margin-bottom: 3px; font-weight: 500; }
+  .array-box.current { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .array-box.compare { background: var(--teal-soft); border-color: var(--teal); color: var(--ink); }
+  .array-box.swap { background: var(--amber-soft); border-color: var(--amber); color: var(--ink); }
+  .array-box.sorted { background: var(--teal-soft); border-color: var(--teal); color: #14523f; opacity: 0.9; }
+
+  .tree-panel { background: #faf9f6; border-radius: 12px; border: 1px solid var(--border); min-height: 260px; display: flex; align-items: center; justify-content: center; }
+  .tree-panel svg { display: block; }
+  .tree-node-group { transition: transform var(--anim-dur) ease; }
+  .tree-node-circle { transition: fill 0.2s ease, stroke 0.2s ease; }
+  .empty-hint { color: var(--ink-soft); font-size: 14px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 14px; font-size: 13.5px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .swatch { width: 13px; height: 13px; border-radius: 4px; display: inline-block; border: 2px solid; }
+  .swatch.current { background: var(--accent-soft); border-color: var(--accent); }
+  .swatch.compare { background: var(--teal-soft); border-color: var(--teal); }
+  .swatch.swap { background: var(--amber-soft); border-color: var(--amber); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Heapsort Visualizer</h1>
+    <p>Enter an unsorted array and watch heapsort fully sort it: heapify, then repeatedly extract the max.</p>
+  </header>
+
+  <div class="panel">
+    <div class="controls">
+      <input type="text" id="arrInput" value="49, 62, 88, 73, 20, 94, 68">
+      <button class="btn-build" id="btnBuild">Heapsort</button>
+      <button class="btn-ghost" id="btnRandom">Random array</button>
+      <button class="btn-ghost" id="btnReset">Reset</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="nav-row">
+      <button class="btn-nav btn-ghost" id="btnPrev" disabled>← Previous</button>
+      <button class="btn-nav" id="btnNext" disabled>Next step →</button>
+      <button class="btn-nav btn-play-go" id="btnPlay" style="min-width:48px;font-size:18px;" disabled>▶</button>
+      <label style="font-size:13.5px;color:var(--ink-soft);display:flex;align-items:center;gap:8px;">
+        Speed
+        <input type="range" id="speedSlider" min="200" max="1600" step="50" value="700" style="width:120px;">
+      </label>
+      <div class="spacer"></div>
+      <div class="step-indicator" id="stepIndicator"></div>
+    </div>
+    <div class="narration" id="narration">Enter an array above and click "Heapsort" to begin.</div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h3 style="margin:0 0 10px 0;font-size:14px;color:var(--accent);">Array</h3>
+      <div class="array-track" id="arrayRow"><div class="empty-hint">Not built yet.</div></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0 0 10px 0;font-size:14px;color:var(--accent);">Tree view</h3>
+      <div class="tree-panel" id="treePanel"><div class="empty-hint">Not built yet.</div></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="swatch current"></span> node being percolated</span>
+    <span><span class="swatch compare"></span> child being compared</span>
+    <span><span class="swatch swap"></span> about to swap</span>
+    <span><span class="swatch" style="background:var(--teal-soft);border-color:var(--teal);"></span> locked into sorted position</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var arrayRow = document.getElementById('arrayRow');
+  var treePanel = document.getElementById('treePanel');
+  var narration = document.getElementById('narration');
+  var stepIndicator = document.getElementById('stepIndicator');
+  var btnPrev = document.getElementById('btnPrev');
+  var btnNext = document.getElementById('btnNext');
+  var btnPlay = document.getElementById('btnPlay');
+  var speedSlider = document.getElementById('speedSlider');
+  var btnBuild = document.getElementById('btnBuild');
+  var btnRandom = document.getElementById('btnRandom');
+  var btnReset = document.getElementById('btnReset');
+  var arrInput = document.getElementById('arrInput');
+
+  var speedMs = Number(speedSlider.max) + Number(speedSlider.min) - Number(speedSlider.value);
+  function applyAnimDuration(){
+    var dur = Math.min(speedMs * 0.65, 650);
+    document.documentElement.style.setProperty('--anim-dur', (dur / 1000) + 's');
+  }
+  applyAnimDuration();
+  speedSlider.addEventListener('input', function () {
+    speedMs = Number(speedSlider.max) + Number(speedSlider.min) - Number(speedSlider.value);
+    applyAnimDuration();
+    if (playTimerActive()) restartPlayTimer();
+  });
+
+  // ---- persistent node identity ----
+  var nextId = 1;
+  function makeNode(val) { return { id: nextId++, val: val }; }
+
+  var BOX_WIDTH = 66;
+  var arrayBoxEls = {}; // id -> DOM element
+
+  function renderArrayRow(arr, roles, activeSize){
+    var emptyHint = arrayRow.querySelector('.empty-hint');
+    if (emptyHint) emptyHint.remove();
+
+    var liveIds = {};
+    arr.forEach(function (node) { liveIds[node.id] = true; });
+    Object.keys(arrayBoxEls).forEach(function (idKey) {
+      if (!liveIds[idKey]) { arrayBoxEls[idKey].remove(); delete arrayBoxEls[idKey]; }
+    });
+
+    arr.forEach(function (node, i) {
+      var role = (activeSize !== undefined && i >= activeSize) ? 'sorted' : roles[i];
+      var box = arrayBoxEls[node.id];
+      if (!box) {
+        box = document.createElement('div');
+        box.className = 'array-box';
+        var idxLabel = document.createElement('div');
+        idxLabel.className = 'idx';
+        box.appendChild(idxLabel);
+        var valDiv = document.createElement('div');
+        box.appendChild(valDiv);
+        arrayRow.appendChild(box);
+        arrayBoxEls[node.id] = box;
+      }
+      box.className = 'array-box' + (role ? ' ' + role : '');
+      box.style.left = (i * BOX_WIDTH) + 'px';
+      box.children[0].textContent = '[' + i + ']';
+      box.children[1].textContent = node.val;
+    });
+  }
+
+  function resetArrayView(){
+    arrayRow.innerHTML = '<div class="empty-hint">Not built yet.</div>';
+    arrayBoxEls = {};
+  }
+
+  function layoutTreeFromArray(arr){
+    var n = arr.length;
+    var maxDepth = n > 0 ? Math.floor(Math.log2(n)) : 0;
+    var bottomWidth = Math.pow(2, maxDepth);
+    var totalWidth = Math.max(360, bottomWidth * 64 + 60);
+    var coords = [];
+    for (var i = 0; i < n; i++) {
+      var depth = Math.floor(Math.log2(i + 1));
+      var levelStart = Math.pow(2, depth) - 1;
+      var posInLevel = i - levelStart;
+      var levelWidth = Math.pow(2, depth);
+      var slotWidth = totalWidth / levelWidth;
+      coords[i] = { x: slotWidth * (posInLevel + 0.5), y: 34 + depth * 70 };
+    }
+    var height = Math.max(180, 34 + maxDepth * 70 + 44);
+    return { coords: coords, width: totalWidth, height: height };
+  }
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var treeNodeEls = {}; // id -> {g, circle, text}
+  var treeEdgeEls = [];
+
+  function ensureTreeSvg(){
+    if (treePanel.querySelector('svg')) return treePanel.querySelector('svg');
+    treePanel.innerHTML = '';
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', '100%');
+    treePanel.appendChild(svg);
+    treeNodeEls = {};
+    treeEdgeEls = [];
+    return svg;
+  }
+
+  function renderTree(activeArr, roles){
+    var svg = ensureTreeSvg();
+    var layout = layoutTreeFromArray(activeArr);
+    svg.setAttribute('viewBox', '0 0 ' + layout.width + ' ' + layout.height);
+    svg.setAttribute('height', layout.height);
+
+    var liveIds = {};
+    activeArr.forEach(function (node) { liveIds[node.id] = true; });
+    Object.keys(treeNodeEls).forEach(function (idKey) {
+      if (!liveIds[idKey]) { treeNodeEls[idKey].g.remove(); delete treeNodeEls[idKey]; }
+    });
+
+    treeEdgeEls.forEach(function (e) { e.line.remove(); });
+    treeEdgeEls = [];
+    for (var i = 0; i < activeArr.length; i++) {
+      var l = 2*i+1, r = 2*i+2;
+      [l, r].forEach(function (childIdx) {
+        if (childIdx >= activeArr.length) return;
+        var line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', layout.coords[i].x); line.setAttribute('y1', layout.coords[i].y);
+        line.setAttribute('x2', layout.coords[childIdx].x); line.setAttribute('y2', layout.coords[childIdx].y);
+        line.setAttribute('stroke', '#cfc9bd'); line.setAttribute('stroke-width', '1.5');
+        svg.insertBefore(line, svg.firstChild);
+        treeEdgeEls.push({ line: line });
+      });
+    }
+
+    activeArr.forEach(function (node, i) {
+      var rec = treeNodeEls[node.id];
+      var x = layout.coords[i].x, y = layout.coords[i].y;
+      if (!rec) {
+        var g = document.createElementNS(SVG_NS, 'g');
+        g.setAttribute('class', 'tree-node-group');
+        g.setAttribute('transform', 'translate(' + x + ',' + y + ')');
+        var circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('class', 'tree-node-circle');
+        circle.setAttribute('r', '20');
+        var text = document.createElementNS(SVG_NS, 'text');
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('dominant-baseline', 'central');
+        text.setAttribute('font-size', '14');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('font-family', 'monospace');
+        g.appendChild(circle); g.appendChild(text);
+        svg.appendChild(g);
+        rec = { g: g, circle: circle, text: text };
+        treeNodeEls[node.id] = rec;
+      } else {
+        rec.g.setAttribute('transform', 'translate(' + x + ',' + y + ')');
+      }
+      var role = roles[i];
+      var fill = '#ffffff', stroke = '#b9b3a1', tcolor = '#2c2a24', sw = 1.8;
+      if (role === 'current') { fill = '#ede9fb'; stroke = '#534ab7'; tcolor = '#3d3560'; sw = 2.6; }
+      else if (role === 'compare') { fill = '#e3f4f0'; stroke = '#1f8f74'; tcolor = '#14523f'; sw = 2.4; }
+      else if (role === 'swap') { fill = '#fdeee0'; stroke = '#c8792c'; tcolor = '#7a4210'; sw = 2.6; }
+      rec.circle.setAttribute('fill', fill);
+      rec.circle.setAttribute('stroke', stroke);
+      rec.circle.setAttribute('stroke-width', sw);
+      rec.text.setAttribute('fill', tcolor);
+      rec.text.textContent = node.val;
+    });
+  }
+
+  function resetTreeView(){
+    treePanel.innerHTML = '<div class="empty-hint">Not built yet.</div>';
+    treeNodeEls = {};
+    treeEdgeEls = [];
+  }
+
+  // ---- generate the full heapsort trace (heapify + repeated max-extraction) ----
+  function buildHeapsortTrace(initialVals){
+    var steps = [];
+    var arr = initialVals.map(makeNode);
+    var n = arr.length;
+
+    function push(text, roles, kind, activeSize){
+      steps.push({ arr: arr.slice(), text: text, roles: roles || {}, kind: kind || 'info', activeSize: activeSize !== undefined ? activeSize : n });
+    }
+    function valsOf(a){ return a.map(function(nd){ return nd.val; }); }
+
+    if (n <= 1) {
+      push('Array has ' + n + ' element(s) — already trivially sorted.', {}, 'success', n);
+      return steps;
+    }
+
+    var largestInternal = Math.floor(n / 2) - 1;
+    push('PHASE 1: Heapify. Largest internal node index = \u230A' + n + '/2\u230B \u2212 1 = ' + largestInternal + '.', {}, 'header', n);
+
+    function percolateDownTrace(startIdx, size){
+      var nodeIndex = startIdx;
+      var value = arr[nodeIndex].val;
+      var childIndex = 2*nodeIndex+1;
+      while (true) {
+        if (childIndex >= size) {
+          push('Index ' + nodeIndex + ' has no children within the active heap — done.', roleFor(nodeIndex), 'success', size);
+          break;
+        }
+        var left = childIndex, right = childIndex+1;
+        var winner = left;
+        if (right < size && arr[right].val > arr[left].val) winner = right;
+
+        push('Comparing ' + arr[nodeIndex].val + ' (index ' + nodeIndex + ') with child ' + arr[winner].val + ' (index ' + winner + ').', roleFor(nodeIndex, winner), 'info', size);
+
+        if (arr[winner].val > arr[nodeIndex].val) {
+          push('Swap indices ' + nodeIndex + ' and ' + winner + '.', roleFor(nodeIndex, winner, true), 'amber', size);
+          var tmp = arr[nodeIndex]; arr[nodeIndex] = arr[winner]; arr[winner] = tmp;
+          nodeIndex = winner;
+          childIndex = 2*nodeIndex+1;
+          push('Swapped! Array now [' + valsOf(arr).join(', ') + '].', roleFor(nodeIndex), 'success', size);
+        } else {
+          push(value + ' is already \u2265 both children — done.', roleFor(nodeIndex), 'success', size);
+          break;
+        }
+      }
+    }
+
+    for (var start = largestInternal; start >= 0; start--) {
+      push('Percolating down index ' + start + ' (value ' + arr[start].val + ').', roleFor(start), 'header', n);
+      percolateDownTrace(start, n);
+    }
+
+    push('Heapify complete! Max-heap array: [' + valsOf(arr).join(', ') + '].', {}, 'header', n);
+
+    push('PHASE 2: Repeatedly swap the max (root) with the last active slot, shrink, and percolate-down.', {}, 'header', n);
+
+    for (var i = n - 1; i > 0; i--) {
+      push('Swap root (' + arr[0].val + ') with index ' + i + ' (' + arr[i].val + ').', roleFor(0, i, true), 'amber', i + 1);
+      var t = arr[0]; arr[0] = arr[i]; arr[i] = t;
+      push('Index ' + i + ' now holds ' + arr[i].val + ' — locked into its final sorted position.', {}, 'success', i);
+      percolateDownTrace(0, i);
+    }
+
+    push('Heapsort complete! Fully sorted array: [' + valsOf(arr).join(', ') + '].', {}, 'header', 0);
+    return steps;
+  }
+
+  function roleFor(nodeIdx, childIdx, isSwap){
+    var roles = {};
+    if (nodeIdx !== undefined && nodeIdx !== null) roles[nodeIdx] = isSwap ? 'swap' : 'current';
+    if (childIdx !== undefined && childIdx !== null) roles[childIdx] = isSwap ? 'swap' : 'compare';
+    return roles;
+  }
+
+  var trace = null;
+  var stepIdx = 0;
+  var playTimer = null;
+
+  function stopPlaying(){
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    btnPlay.textContent = '▶';
+    btnPlay.classList.remove('btn-play-stop');
+    btnPlay.classList.add('btn-play-go');
+  }
+  function playTimerActive(){ return !!playTimer; }
+  function startPlayTimer(){
+    playTimer = setInterval(function(){
+      if (!trace || stepIdx >= trace.length - 1) { stopPlaying(); return; }
+      stepIdx++;
+      showStep();
+    }, speedMs);
+  }
+  function restartPlayTimer(){
+    clearInterval(playTimer);
+    startPlayTimer();
+  }
+
+  function showStep(){
+    var step = trace[stepIdx];
+    var activeSize = step.activeSize !== undefined ? step.activeSize : step.arr.length;
+    renderArrayRow(step.arr, step.roles, activeSize);
+    renderTree(step.arr.slice(0, activeSize), step.roles);
+    narration.textContent = step.text;
+    narration.className = 'narration' + (step.kind ? ' ' + step.kind : '');
+    stepIndicator.textContent = 'Step ' + (stepIdx+1) + ' / ' + trace.length;
+    btnPrev.disabled = stepIdx === 0;
+    btnNext.disabled = stepIdx === trace.length - 1;
+    if (stepIdx === trace.length - 1) stopPlaying();
+  }
+
+  btnPlay.addEventListener('click', function(){
+    if (!trace) return;
+    if (playTimer) { stopPlaying(); return; }
+    if (stepIdx >= trace.length - 1) stepIdx = -1;
+    btnPlay.textContent = '⏸';
+    btnPlay.classList.remove('btn-play-go');
+    btnPlay.classList.add('btn-play-stop');
+    startPlayTimer();
+  });
+
+  btnBuild.addEventListener('click', function(){
+    var raw = arrInput.value.trim();
+    if (!raw){ narration.textContent = 'Enter an array first.'; return; }
+    var parts = raw.split(',').map(function(s){ return Number(s.trim()); }).filter(function(n){ return !isNaN(n); });
+    if (parts.length === 0){ narration.textContent = 'Could not parse that array.'; return; }
+
+    stopPlaying();
+    trace = buildHeapsortTrace(parts);
+    stepIdx = 0;
+    btnPrev.disabled = false;
+    btnNext.disabled = trace.length <= 1;
+    btnPlay.disabled = trace.length <= 1;
+    showStep();
+  });
+
+  btnNext.addEventListener('click', function(){
+    if (!trace || stepIdx >= trace.length - 1) return;
+    stopPlaying();
+    stepIdx++;
+    showStep();
+  });
+  btnPrev.addEventListener('click', function(){
+    if (!trace || stepIdx <= 0) return;
+    stopPlaying();
+    stepIdx--;
+    showStep();
+  });
+  btnRandom.addEventListener('click', function () {
+    var size = Math.floor(Math.random() * 5) + 5; // 5 to 9 elements
+    var vals = [];
+    for (var i = 0; i < size; i++) vals.push(Math.floor(Math.random() * 90) + 10);
+    arrInput.value = vals.join(', ');
+    stopPlaying();
+    trace = buildHeapsortTrace(vals);
+    stepIdx = 0;
+    btnPrev.disabled = false;
+    btnNext.disabled = trace.length <= 1;
+    btnPlay.disabled = trace.length <= 1;
+    showStep();
+  });
+
+  btnReset.addEventListener('click', function(){
+    stopPlaying();
+    trace = null; stepIdx = 0;
+    btnPrev.disabled = true; btnNext.disabled = true; btnPlay.disabled = true;
+    stepIndicator.textContent = '';
+    resetArrayView();
+    resetTreeView();
+    narration.textContent = 'Enter an array above and click "Heapsort" to begin.';
+    narration.className = 'narration';
+  });
+})();
+</script>
+</body>
+</html>
