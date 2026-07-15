@@ -13,34 +13,34 @@
     color: #2c2a24;
   }
   .card {
-    max-width: 900px;
+    max-width: 1140px;
     margin: 0 auto;
     background: #ffffff;
-    border-radius: 14px;
-    padding: 24px 28px;
+    border-radius: 16px;
+    padding: 32px 36px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
-  h1 { font-size: 20px; margin: 0 0 4px 0; }
-  .sub { font-size: 13.5px; color: #6b6658; margin: 0 0 18px 0; }
+  h1 { font-size: 26px; margin: 0 0 6px 0; }
+  .sub { font-size: 16px; color: #6b6658; margin: 0 0 22px 0; }
 
-  .setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
-  .setup-row label { font-size: 13px; color: #6b6658; display: flex; align-items: center; gap: 6px; }
+  .setup-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .setup-row label { font-size: 15px; color: #6b6658; display: flex; align-items: center; gap: 7px; }
   .setup-row input[type="text"] {
-    padding: 7px 10px; border-radius: 7px; border: 1px solid #e2ddd0;
-    font-family: 'SF Mono', Consolas, monospace; font-size: 13px;
+    padding: 10px 13px; border-radius: 8px; border: 1px solid #e2ddd0;
+    font-family: 'SF Mono', Consolas, monospace; font-size: 15px;
   }
 
-  .toggle-group { display: inline-flex; border-radius: 8px; overflow: hidden; border: 1px solid #e2ddd0; }
+  .toggle-group { display: inline-flex; border-radius: 9px; overflow: hidden; border: 1px solid #e2ddd0; }
   .toggle-group button { border-radius: 0; border: none; }
   .toggle-group button.active { background: #534ab7; color: #fff; }
 
   button {
-    padding: 8px 16px;
-    border-radius: 8px;
+    padding: 11px 20px;
+    border-radius: 9px;
     border: 1px solid #e2ddd0;
     background: #f7f6f3;
     color: #2c2a24;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     cursor: pointer;
   }
@@ -49,41 +49,41 @@
   button.primary { background: #2c2a24; color: #fff; border-color: #2c2a24; }
   button.build { background: #534ab7; color: #fff; border-color: #534ab7; }
 
-  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
   .toolbar .spacer { flex: 1; }
-  .speed-label { font-size: 12.5px; color: #6b6658; display: flex; align-items: center; gap: 6px; }
+  .speed-label { font-size: 14.5px; color: #6b6658; display: flex; align-items: center; gap: 7px; }
 
-  .content-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+  .content-row { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 18px; }
   .graph-col { flex-shrink: 0; }
-  .side-col { flex: 1; min-width: 220px; }
+  .side-col { flex: 1; min-width: 280px; }
 
-  .side-label { font-size: 13px; color: #6b6658; margin: 0 0 6px 0; }
+  .side-label { font-size: 15px; color: #6b6658; margin: 0 0 8px 0; }
   .stack-box, .set-box {
-    display: flex; gap: 4px; min-height: 44px; border: 1px dashed #d8d3c6;
-    border-radius: 8px; padding: 8px; flex-wrap: wrap;
+    display: flex; gap: 6px; min-height: 56px; border: 1px dashed #d8d3c6;
+    border-radius: 10px; padding: 10px; flex-wrap: wrap;
   }
   .stack-box.as-stack { flex-direction: column-reverse; }
-  .stack-box { margin-bottom: 14px; }
+  .stack-box { margin-bottom: 18px; }
   .chip {
-    padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    padding: 8px 13px; border-radius: 7px; font-size: 15.5px; font-weight: 600;
     background: #f2f1ee; color: #6b6658; border: 1px solid #e2ddd0;
   }
   .chip.front { background: #fdeee0; color: #7a4210; border-color: #c8792c; }
   .chip.visited { background: #e3f4f0; color: #14523f; border-color: #1f8f74; }
-  .empty-hint { color: #9a9484; font-size: 13px; }
+  .empty-hint { color: #9a9484; font-size: 15px; }
 
-  .status { font-size: 14px; color: #3a372e; min-height: 40px; line-height: 1.5; }
+  .status { font-size: 17px; color: #3a372e; min-height: 48px; line-height: 1.55; }
 
-  .pseudo-toggle { font-size: 13px; color: #534ab7; background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; }
+  .pseudo-toggle { font-size: 15px; color: #534ab7; background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; }
   .pseudo-box {
-    margin-top: 14px; background: #faf9f6; border: 1px solid #e2ddd0; border-radius: 8px;
-    padding: 12px 16px; font-family: 'SF Mono', Consolas, monospace; font-size: 12.5px; line-height: 1.7; color: #5a5648;
+    margin-top: 18px; background: #faf9f6; border: 1px solid #e2ddd0; border-radius: 10px;
+    padding: 16px 20px; font-family: 'SF Mono', Consolas, monospace; font-size: 14.5px; line-height: 1.8; color: #5a5648;
   }
   .pseudo-box .active-line { background: #ede9fb; color: #3d3560; font-weight: 700; border-radius: 4px; padding: 0 4px; margin: 0 -4px; }
 
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: #6b6658; margin-top: 4px; }
-  .legend span { display: inline-flex; align-items: center; gap: 5px; }
-  .sw { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; display: inline-block; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 14.5px; color: #6b6658; margin-top: 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 14px; height: 14px; border-radius: 50%; border: 2px solid; display: inline-block; }
 </style>
 </head>
 <body>
@@ -114,7 +114,7 @@
 
   <div class="content-row">
     <div class="graph-col">
-      <svg id="graphSvg" width="280" height="260"></svg>
+      <svg id="graphSvg" width="380" height="350"></svg>
       <div class="legend">
         <span><span class="sw" style="background:#fff;border-color:#b9b3a1;"></span>not discovered</span>
         <span><span class="sw" style="background:#ede9fb;border-color:#534ab7;"></span>discovered</span>
@@ -252,8 +252,8 @@
   function layoutCircle(vertices){
     var n = vertices.length;
     var coords = {};
-    var r = Math.max(80, n * 16);
-    var cx = r + 35, cy = r + 35;
+    var r = Math.max(110, n * 22);
+    var cx = r + 45, cy = r + 45;
     vertices.forEach(function(v, i){
       var angle = (2 * Math.PI * i / n) - Math.PI/2;
       coords[v] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
@@ -266,8 +266,8 @@
     if (!currentLayout) currentLayout = layoutCircle(vertices);
     var layout = currentLayout;
     graphSvg.setAttribute('viewBox', '0 0 ' + layout.width + ' ' + layout.height);
-    graphSvg.setAttribute('width', Math.min(layout.width, 320));
-    graphSvg.setAttribute('height', Math.min(layout.height, 300));
+    graphSvg.setAttribute('width', Math.min(layout.width, 420));
+    graphSvg.setAttribute('height', Math.min(layout.height, 400));
     var html = '';
     var drawn = {};
     vertices.forEach(function(v){
@@ -285,8 +285,8 @@
       var fill = '#ffffff', stroke = '#b9b3a1', tcolor = '#2c2a24';
       if (state === 'purple') { fill = '#ede9fb'; stroke = '#534ab7'; tcolor = '#3d3560'; }
       else if (state === 'green') { fill = '#e3f4f0'; stroke = '#1f8f74'; tcolor = '#14523f'; }
-      html += '<circle cx="'+p.x+'" cy="'+p.y+'" r="18" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.8"/>';
-      html += '<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="monospace" fill="'+tcolor+'">'+v+'</text>';
+      html += '<circle cx="'+p.x+'" cy="'+p.y+'" r="24" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2.2"/>';
+      html += '<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" dominant-baseline="central" font-size="16" font-weight="600" font-family="monospace" fill="'+tcolor+'">'+v+'</text>';
     });
     graphSvg.innerHTML = html;
   }
