@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Traversal Visualizer</title>
+<style>
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f7f6f3;
+    color: #2c2a24;
+  }
+  .card {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 24px 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  h1 { font-size: 20px; margin: 0 0 4px 0; }
+  .sub { font-size: 13.5px; color: #6b6658; margin: 0 0 18px 0; }
+
+  .setup-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .setup-row label { font-size: 13px; color: #6b6658; display: flex; align-items: center; gap: 6px; }
+  .setup-row input[type="text"] {
+    padding: 7px 10px; border-radius: 7px; border: 1px solid #e2ddd0;
+    font-family: 'SF Mono', Consolas, monospace; font-size: 13px;
+  }
+
+  .toggle-group { display: inline-flex; border-radius: 8px; overflow: hidden; border: 1px solid #e2ddd0; }
+  .toggle-group button { border-radius: 0; border: none; }
+  .toggle-group button.active { background: #534ab7; color: #fff; }
+
+  button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #e2ddd0;
+    background: #f7f6f3;
+    color: #2c2a24;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #efece5; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.primary { background: #2c2a24; color: #fff; border-color: #2c2a24; }
+  button.build { background: #534ab7; color: #fff; border-color: #534ab7; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar .spacer { flex: 1; }
+  .speed-label { font-size: 12.5px; color: #6b6658; display: flex; align-items: center; gap: 6px; }
+
+  .content-row { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 14px; }
+  .graph-col { flex-shrink: 0; }
+  .side-col { flex: 1; min-width: 220px; }
+
+  .side-label { font-size: 13px; color: #6b6658; margin: 0 0 6px 0; }
+  .stack-box, .set-box {
+    display: flex; gap: 4px; min-height: 44px; border: 1px dashed #d8d3c6;
+    border-radius: 8px; padding: 8px; flex-wrap: wrap;
+  }
+  .stack-box.as-stack { flex-direction: column-reverse; }
+  .stack-box { margin-bottom: 14px; }
+  .chip {
+    padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    background: #f2f1ee; color: #6b6658; border: 1px solid #e2ddd0;
+  }
+  .chip.front { background: #fdeee0; color: #7a4210; border-color: #c8792c; }
+  .chip.visited { background: #e3f4f0; color: #14523f; border-color: #1f8f74; }
+  .empty-hint { color: #9a9484; font-size: 13px; }
+
+  .status { font-size: 14px; color: #3a372e; min-height: 40px; line-height: 1.5; }
+
+  .pseudo-toggle { font-size: 13px; color: #534ab7; background: none; border: none; cursor: pointer; padding: 0; font-weight: 600; }
+  .pseudo-box {
+    margin-top: 14px; background: #faf9f6; border: 1px solid #e2ddd0; border-radius: 8px;
+    padding: 12px 16px; font-family: 'SF Mono', Consolas, monospace; font-size: 12.5px; line-height: 1.7; color: #5a5648;
+  }
+  .pseudo-box .active-line { background: #ede9fb; color: #3d3560; font-weight: 700; border-radius: 4px; padding: 0 4px; margin: 0 -4px; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: #6b6658; margin-top: 4px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .sw { width: 12px; height: 12px; border-radius: 50%; border: 2px solid; display: inline-block; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Graph Traversal Visualizer</h1>
+  <p class="sub">Step through BFS or DFS, watching the frontier, discovered set, and graph update together.</p>
+
+  <div class="setup-row">
+    <div class="toggle-group">
+      <button id="btnBFS" class="active">BFS</button>
+      <button id="btnDFS">DFS</button>
+    </div>
+    <label>Edges: <input type="text" id="edgesInput" value="A-B, B-C, B-D, B-E, D-E, C-E" style="width:280px;"></label>
+    <label>Start: <input type="text" id="startInput" value="C" style="width:60px;"></label>
+    <button class="build" id="btnBuild">Build</button>
+    <button id="btnRandom">🎲 Random Graph</button>
+  </div>
+
+  <div class="toolbar">
+    <button id="btnPrev" disabled>← Previous</button>
+    <button class="primary" id="btnNext" disabled>Next step</button>
+    <button id="btnPlay" disabled>▶</button>
+    <span class="speed-label">Speed <input type="range" id="speedSlider" min="200" max="1600" step="50" value="700" style="width:100px;"></span>
+    <div class="spacer"></div>
+    <span id="stepIndicator" style="font-size:12.5px;color:#9a9484;font-family:monospace;"></span>
+    <button id="btnReset">Reset</button>
+  </div>
+
+  <div class="content-row">
+    <div class="graph-col">
+      <svg id="graphSvg" width="280" height="260"></svg>
+      <div class="legend">
+        <span><span class="sw" style="background:#fff;border-color:#b9b3a1;"></span>not discovered</span>
+        <span><span class="sw" style="background:#ede9fb;border-color:#534ab7;"></span>discovered</span>
+        <span><span class="sw" style="background:#e3f4f0;border-color:#1f8f74;"></span>visited</span>
+      </div>
+    </div>
+    <div class="side-col">
+      <p class="side-label" id="frontierLabel">frontierQueue:</p>
+      <div class="stack-box" id="frontierBox"><span class="empty-hint">Click Build to start</span></div>
+      <p class="side-label">discoveredSet:</p>
+      <div class="set-box" id="discoveredBox"><span class="empty-hint">—</span></div>
+    </div>
+  </div>
+
+  <p class="status" id="status">Enter edges and a start vertex, then click Build.</p>
+
+  <button class="pseudo-toggle" id="btnTogglePseudo">▸ Show pseudocode</button>
+  <div class="pseudo-box" id="pseudoBox" style="display:none;"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var mode = 'BFS';
+
+  var BFS_CODE = [
+    'GraphBFS(startVertex) {',
+    '  Create new queue named frontierQueue',
+    '  Create new set named discoveredSet',
+    '',
+    '  Enqueue startVertex in frontierQueue',
+    '  Add startVertex to discoveredSet',
+    '',
+    '  while ( frontierQueue is not empty ) {',
+    '    currentVertex = Dequeue from frontierQueue',
+    '    Visit currentVertex',
+    '    for each vertex adjV adjacent to currentVertex {',
+    '      if ( adjV is not in discoveredSet ) {',
+    '        Enqueue adjV in frontierQueue',
+    '        Add adjV to discoveredSet',
+    '      }',
+    '    }',
+    '  }',
+    '}'
+  ];
+  var DFS_CODE = [
+    'GraphDFS(startVertex) {',
+    '  Create new stack named frontierStack',
+    '  Create new set named discoveredSet',
+    '',
+    '  Push startVertex onto frontierStack',
+    '  Add startVertex to discoveredSet',
+    '',
+    '  while ( frontierStack is not empty ) {',
+    '    currentVertex = Pop from frontierStack',
+    '    Visit currentVertex',
+    '    for each vertex adjV adjacent to currentVertex {',
+    '      if ( adjV is not in discoveredSet ) {',
+    '        Push adjV onto frontierStack',
+    '        Add adjV to discoveredSet',
+    '      }',
+    '    }',
+    '  }',
+    '}'
+  ];
+  var LINE = { SIG:0, NEWFRONTIER:1, NEWSET:2, ADDSTART:4, ADDSTARTSET:5, WHILE:7, REMOVE:8, VISIT:9, FOR:10, IF:11, ADDADJ:12, ADDADJSET:13 };
+
+  var edgesInput = document.getElementById('edgesInput');
+  var startInput = document.getElementById('startInput');
+  var btnBuild = document.getElementById('btnBuild');
+  var btnRandom = document.getElementById('btnRandom');
+  var btnPrev = document.getElementById('btnPrev');
+  var btnNext = document.getElementById('btnNext');
+  var btnPlay = document.getElementById('btnPlay');
+  var btnReset = document.getElementById('btnReset');
+  var btnBFS = document.getElementById('btnBFS');
+  var btnDFS = document.getElementById('btnDFS');
+  var speedSlider = document.getElementById('speedSlider');
+  var stepIndicator = document.getElementById('stepIndicator');
+  var status = document.getElementById('status');
+  var graphSvg = document.getElementById('graphSvg');
+  var frontierBox = document.getElementById('frontierBox');
+  var frontierLabel = document.getElementById('frontierLabel');
+  var discoveredBox = document.getElementById('discoveredBox');
+  var btnTogglePseudo = document.getElementById('btnTogglePseudo');
+  var pseudoBox = document.getElementById('pseudoBox');
+
+  function setMode(m){
+    mode = m;
+    btnBFS.classList.toggle('active', m === 'BFS');
+    btnDFS.classList.toggle('active', m === 'DFS');
+    frontierLabel.textContent = (m === 'BFS' ? 'frontierQueue:' : 'frontierStack:');
+    if (pseudoVisible) renderPseudo(trace ? trace[stepIdx].line : -1);
+  }
+  btnBFS.addEventListener('click', function(){ setMode('BFS'); });
+  btnDFS.addEventListener('click', function(){ setMode('DFS'); });
+
+  var pseudoVisible = false;
+  btnTogglePseudo.addEventListener('click', function(){
+    pseudoVisible = !pseudoVisible;
+    pseudoBox.style.display = pseudoVisible ? 'block' : 'none';
+    btnTogglePseudo.textContent = (pseudoVisible ? '▾ Hide' : '▸ Show') + ' pseudocode';
+    if (pseudoVisible) renderPseudo(trace ? trace[stepIdx].line : -1);
+  });
+  function currentCode(){ return mode === 'BFS' ? BFS_CODE : DFS_CODE; }
+  function renderPseudo(activeLine){
+    pseudoBox.innerHTML = currentCode().map(function(l, i){
+      var safe = l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '&nbsp;';
+      return '<div' + (i === activeLine ? ' class="active-line"' : '') + '>' + safe + '</div>';
+    }).join('');
+  }
+
+  var speedMs = Number(speedSlider.max) + Number(speedSlider.min) - Number(speedSlider.value);
+  speedSlider.addEventListener('input', function () {
+    speedMs = Number(speedSlider.max) + Number(speedSlider.min) - Number(speedSlider.value);
+    if (playTimer) restartPlayTimer();
+  });
+
+  function parseGraph(edgeStr){
+    var adj = {}; var vertexSet = {};
+    edgeStr.split(',').map(function(s){ return s.trim(); }).filter(Boolean).forEach(function(p){
+      var parts = p.split('-').map(function(s){ return s.trim(); });
+      if (parts.length !== 2) return;
+      var a = parts[0], b = parts[1];
+      vertexSet[a] = true; vertexSet[b] = true;
+      if (!adj[a]) adj[a] = [];
+      if (!adj[b]) adj[b] = [];
+      if (adj[a].indexOf(b) === -1) adj[a].push(b);
+      if (adj[b].indexOf(a) === -1) adj[b].push(a);
+    });
+    return { adj: adj, vertices: Object.keys(vertexSet) };
+  }
+
+  function layoutCircle(vertices){
+    var n = vertices.length;
+    var coords = {};
+    var r = Math.max(80, n * 16);
+    var cx = r + 35, cy = r + 35;
+    vertices.forEach(function(v, i){
+      var angle = (2 * Math.PI * i / n) - Math.PI/2;
+      coords[v] = { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+    });
+    return { coords: coords, width: cx * 2, height: cy * 2 };
+  }
+  var currentLayout = null;
+
+  function renderGraph(vertices, adj, states){
+    if (!currentLayout) currentLayout = layoutCircle(vertices);
+    var layout = currentLayout;
+    graphSvg.setAttribute('viewBox', '0 0 ' + layout.width + ' ' + layout.height);
+    graphSvg.setAttribute('width', Math.min(layout.width, 320));
+    graphSvg.setAttribute('height', Math.min(layout.height, 300));
+    var html = '';
+    var drawn = {};
+    vertices.forEach(function(v){
+      (adj[v] || []).forEach(function(nb){
+        var key = [v, nb].sort().join('|');
+        if (drawn[key]) return;
+        drawn[key] = true;
+        var p1 = layout.coords[v], p2 = layout.coords[nb];
+        html += '<line x1="'+p1.x+'" y1="'+p1.y+'" x2="'+p2.x+'" y2="'+p2.y+'" stroke="#d8d3c6" stroke-width="1.3"/>';
+      });
+    });
+    vertices.forEach(function(v){
+      var p = layout.coords[v];
+      var state = states[v] || 'white';
+      var fill = '#ffffff', stroke = '#b9b3a1', tcolor = '#2c2a24';
+      if (state === 'purple') { fill = '#ede9fb'; stroke = '#534ab7'; tcolor = '#3d3560'; }
+      else if (state === 'green') { fill = '#e3f4f0'; stroke = '#1f8f74'; tcolor = '#14523f'; }
+      html += '<circle cx="'+p.x+'" cy="'+p.y+'" r="18" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.8"/>';
+      html += '<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="600" font-family="monospace" fill="'+tcolor+'">'+v+'</text>';
+    });
+    graphSvg.innerHTML = html;
+  }
+
+  function renderChips(container, items, isStack){
+    container.className = isStack ? 'stack-box as-stack' : 'set-box';
+    container.innerHTML = '';
+    if (items.length === 0){ container.innerHTML = '<span class="empty-hint">empty</span>'; return; }
+    items.forEach(function(v, i){
+      var chip = document.createElement('div');
+      var isFront = isStack ? (i === items.length - 1) : (i === 0);
+      chip.className = 'chip' + (isFront ? ' front' : '');
+      chip.textContent = v;
+      container.appendChild(chip);
+    });
+  }
+  function renderDiscovered(items){
+    discoveredBox.innerHTML = '';
+    if (items.length === 0){ discoveredBox.innerHTML = '<span class="empty-hint">—</span>'; return; }
+    items.forEach(function(v){
+      var chip = document.createElement('div');
+      chip.className = 'chip visited';
+      chip.textContent = v;
+      discoveredBox.appendChild(chip);
+    });
+  }
+
+  function buildTrace(adj, vertices, start, isDFS){
+    var steps = [];
+    function push(line, text, extra){
+      var s = { line: line, text: text };
+      for (var k in extra) s[k] = extra[k];
+      steps.push(s);
+    }
+    var frontier = [];
+    var discoveredSet = [];
+    var visitOrder = [];
+    var states = {};
+    vertices.forEach(function(v){ states[v] = 'white'; });
+    function snap(){ return { frontier: frontier.slice(), discovered: discoveredSet.slice(), visited: visitOrder.slice(), states: Object.assign({}, states) }; }
+    function addF(v){ frontier.push(v); }
+    function removeF(){ return isDFS ? frontier.pop() : frontier.shift(); }
+
+    var addAction = isDFS ? 'top of the waiting list' : 'back of the waiting list';
+    var removeAction = isDFS
+      ? 'from the top of the waiting list (the one we added most recently)'
+      : 'from the front of the waiting list (the one we added first)';
+
+    push(LINE.SIG, 'Let\'s explore the graph starting at ' + start + '.', snap());
+    push(LINE.NEWFRONTIER, 'Set up an empty waiting list to hold vertices we still need to explore.', snap());
+    push(LINE.NEWSET, 'Set up an empty list to keep track of vertices we\'ve already found.', snap());
+
+    addF(start);
+    push(LINE.ADDSTART, 'Add ' + start + ' to the ' + addAction + ', since that\'s where we\'re starting.', snap());
+    discoveredSet.push(start); states[start] = 'purple';
+    push(LINE.ADDSTARTSET, 'Mark ' + start + ' as found, so we don\'t add it again later.', snap());
+
+    while (frontier.length > 0) {
+      push(LINE.WHILE, 'There are still vertices waiting to be explored, so keep going.', snap());
+      var current = removeF();
+      push(LINE.REMOVE, 'Take ' + current + ' ' + removeAction + ' so we can explore it.', Object.assign(snap(), {current:current}));
+      states[current] = 'green'; visitOrder.push(current);
+      push(LINE.VISIT, 'Look at ' + current + ' now — we\'ve officially explored it.', Object.assign(snap(), {current:current}));
+
+      var neighbors = adj[current] || [];
+      if (neighbors.length === 0) {
+        push(LINE.FOR, current + ' isn\'t connected to anything else.', Object.assign(snap(), {current:current}));
+      } else {
+        var newOnes = [];
+        var alreadyFound = [];
+        neighbors.forEach(function(adjV){
+          if (discoveredSet.indexOf(adjV) !== -1) { alreadyFound.push(adjV); }
+          else { newOnes.push(adjV); }
+        });
+        newOnes.forEach(function(adjV){
+          addF(adjV);
+          discoveredSet.push(adjV);
+          states[adjV] = 'purple';
+        });
+        var text = 'Look at ' + current + '\'s neighbors: ' + neighbors.join(', ') + '.';
+        if (newOnes.length > 0) {
+          text += ' ' + newOnes.join(', ') + (newOnes.length === 1 ? ' hasn\'t' : ' haven\'t') +
+            ' been found yet, so add ' + (newOnes.length === 1 ? 'it' : 'them') + ' to the waiting list.';
+        }
+        if (alreadyFound.length > 0) {
+          text += ' ' + alreadyFound.join(', ') + (alreadyFound.length === 1 ? ' has' : ' have') +
+            ' already been found, so skip ' + (alreadyFound.length === 1 ? 'it' : 'them') + '.';
+        }
+        push(LINE.FOR, text, Object.assign(snap(), {current:current}));
+      }
+    }
+    push(LINE.WHILE, 'The waiting list is empty — we\'re done! We explored the vertices in this order: ' + visitOrder.join(', ') + '.', snap());
+    return steps;
+  }
+
+  var trace = null, stepIdx = 0, graphVertices = null, graphAdj = null, playTimer = null;
+
+  function stopPlaying(){
+    if (playTimer) { clearInterval(playTimer); playTimer = null; }
+    btnPlay.textContent = '▶';
+  }
+  function startPlayTimer(){
+    playTimer = setInterval(function(){
+      if (!trace || stepIdx >= trace.length - 1) { stopPlaying(); return; }
+      stepIdx++; showStep();
+    }, speedMs);
+  }
+  function restartPlayTimer(){ clearInterval(playTimer); startPlayTimer(); }
+
+  function showStep(){
+    var step = trace[stepIdx];
+    renderGraph(graphVertices, graphAdj, step.states);
+    renderChips(frontierBox, step.frontier, mode === 'DFS');
+    renderDiscovered(step.discovered);
+    status.textContent = step.text;
+    stepIndicator.textContent = 'Step ' + (stepIdx+1) + ' / ' + trace.length;
+    btnPrev.disabled = stepIdx === 0;
+    btnNext.disabled = stepIdx === trace.length - 1;
+    if (pseudoVisible) renderPseudo(step.line);
+    if (stepIdx === trace.length - 1) stopPlaying();
+  }
+
+  function doBuild(){
+    var edgeStr = edgesInput.value.trim();
+    var start = startInput.value.trim();
+    if (!edgeStr){ status.textContent = 'Enter at least one edge.'; return; }
+    var parsed = parseGraph(edgeStr);
+    if (parsed.vertices.indexOf(start) === -1){ status.textContent = 'Start vertex not in graph.'; return; }
+    stopPlaying();
+    graphVertices = parsed.vertices; graphAdj = parsed.adj; currentLayout = null;
+    trace = buildTrace(graphAdj, graphVertices, start, mode === 'DFS');
+    stepIdx = 0;
+    btnPrev.disabled = false; btnNext.disabled = trace.length <= 1; btnPlay.disabled = trace.length <= 1;
+    showStep();
+  }
+  btnBuild.addEventListener('click', doBuild);
+
+  function generateRandomGraph(){
+    var letters = ['A','B','C','D','E','F','G','H'];
+    var n = 4 + Math.floor(Math.random() * 4); // 4 to 7 vertices
+    var vertices = letters.slice(0, n);
+    var edges = [];
+    var edgeKeys = {};
+    function addEdge(a, b){
+      var key = [a,b].sort().join('-');
+      if (a === b || edgeKeys[key]) return;
+      edgeKeys[key] = true;
+      edges.push(a + '-' + b);
+    }
+    // First, connect everything with a random spanning path so there are no isolated islands
+    var shuffled = vertices.slice().sort(function(){ return Math.random() - 0.5; });
+    for (var i = 0; i < shuffled.length - 1; i++) {
+      addEdge(shuffled[i], shuffled[i+1]);
+    }
+    // Then sprinkle in a few extra random edges for interesting branching
+    var extra = Math.floor(Math.random() * (n));
+    for (var j = 0; j < extra; j++) {
+      var a = vertices[Math.floor(Math.random() * n)];
+      var b = vertices[Math.floor(Math.random() * n)];
+      addEdge(a, b);
+    }
+    edgesInput.value = edges.join(', ');
+    startInput.value = vertices[Math.floor(Math.random() * n)];
+  }
+  btnRandom.addEventListener('click', function(){
+    generateRandomGraph();
+    doBuild();
+  });
+
+  btnNext.addEventListener('click', function(){ if (!trace || stepIdx >= trace.length-1) return; stopPlaying(); stepIdx++; showStep(); });
+  btnPrev.addEventListener('click', function(){ if (!trace || stepIdx <= 0) return; stopPlaying(); stepIdx--; showStep(); });
+  btnPlay.addEventListener('click', function(){
+    if (!trace) return;
+    if (playTimer) { stopPlaying(); return; }
+    if (stepIdx >= trace.length - 1) stepIdx = -1;
+    btnPlay.textContent = '⏸';
+    startPlayTimer();
+  });
+  btnReset.addEventListener('click', function(){
+    stopPlaying();
+    trace = null; stepIdx = 0; currentLayout = null;
+    btnPrev.disabled = true; btnNext.disabled = true; btnPlay.disabled = true;
+    stepIndicator.textContent = '';
+    graphSvg.innerHTML = '';
+    frontierBox.innerHTML = '<span class="empty-hint">Click Build to start</span>';
+    discoveredBox.innerHTML = '<span class="empty-hint">—</span>';
+    status.textContent = 'Enter edges and a start vertex, then click Build.';
+  });
+})();
+</script>
+</body>
+</html>
